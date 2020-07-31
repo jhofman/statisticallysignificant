@@ -92,12 +92,19 @@ function ready(error, fetched_geo_data, fetched_data) {
         .attr('y1', -200)
         .attr('y2', 200)
     //.on("end", play_animation(svg, data, circles, x_scale, y_scale))
-
+    
     // when the input range changes update the angle 
     d3.select("#nAngle").on("input", function () {
         angle = +this.value;
         update_split(divider, projection(center_of_map)[0], 200, +this.value, circles);
     });
+
+    var url_angle = $.url().param('angle');
+    if (typeof(url_angle) !== "undefined") {
+        angle = +url_angle;
+        $('#nAngle').val(angle);
+        update_split(divider, projection(center_of_map)[0], 200, angle, circles);
+    }
 
     circles
         .style("fill", function (d) { if (is_left_of_line(+d.long, +d.lat)) return "purple"; else return "green"; });
