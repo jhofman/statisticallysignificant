@@ -54,10 +54,10 @@ function ready(error, fetched_geo_data, fetched_data) {
         .data(data)
         .enter()
         .append("circle")
-        .attr("cx", function (d) { return projection([+d.homelon, +d.homelat])[0] })
-        .attr("cy", function (d) { return projection([+d.homelon, +d.homelat])[1] })
+        .attr("cx", function (d) { return projection([+d.long, +d.lat])[0] })
+        .attr("cy", function (d) { return projection([+d.long, +d.lat])[1] })
         .attr("r", function (d) { return 2 })
-        .style("fill", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple"; else return "green"; })
+        .style("fill", function (d) { if (is_left_of_line(+d.long, +d.lat)) return "purple"; else return "green"; })
         .attr("stroke", function (d) { if (d.n > 2000) { return "black" } else { return "none" } })
         .attr("stroke-width", 1)
         .attr("fill-opacity", 0)
@@ -67,7 +67,7 @@ function ready(error, fetched_geo_data, fetched_data) {
         .delay(function (d, i) { return 1000 * i / data.length; })
         .duration(1)
         .attr("fill-opacity", 0.1)
-        .attr("class", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple-circle"; else return "green-circle"; })
+        .attr("class", function (d) { if (is_left_of_line(+d.long, +d.lat)) return "purple-circle"; else return "green-circle"; })
 
     // add divider line
     var divider = svg.append('line')
@@ -94,7 +94,7 @@ function ready(error, fetched_geo_data, fetched_data) {
     });
 
     circles
-        .style("fill", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple"; else return "green"; });
+        .style("fill", function (d) { if (is_left_of_line(+d.long, +d.lat)) return "purple"; else return "green"; });
 
     // start on start button click
     $('#start-button').click(function () {
@@ -159,7 +159,7 @@ function update(divider, x, y, nAngle, circles) {
 
     circles
         .style("fill", function (d) {
-            if (is_left_of_line(+d.homelon, +d.homelat)) return "purple"; else return "green";
+            if (is_left_of_line(+d.long, +d.lat)) return "purple"; else return "green";
         })
 }
 
@@ -167,7 +167,7 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
     // get averages for left and Green sides
     var avg_height_by_split = d3
         .nest()
-        .key(function (d) { return is_left_of_line(+d.homelon, +d.homelat); })
+        .key(function (d) { return is_left_of_line(+d.long, +d.lat); })
         .rollup(function (v) { return d3.mean(v, v => +v.height); })
         .entries(data)
         .map(function (d) { return d.value; })
@@ -181,7 +181,7 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
     var side_of_line = [];
     var diff_means = [];
     for (i = 0; i < data.length; i++) {
-        var side = +(is_left_of_line(+data[i].homelon, +data[i].homelat));
+        var side = +(is_left_of_line(+data[i].long, +data[i].lat));
         running_sum[side] += +data[i].height;
         running_count[side] += 1;
         moving_target.push(running_sum[side] / running_count[side]);
@@ -202,7 +202,7 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
     var moving_se = [];
     var t_stat = [];
     for (i = 0; i < data.length; i++) {
-        var side = +(is_left_of_line(+data[i].homelon, +data[i].homelat));
+        var side = +(is_left_of_line(+data[i].long, +data[i].lat));
         running_squared_diff[side] += Math.pow(+data[i].height - moving_target[i], 2);
         running_count[side] += 1;
         var sd = Math.sqrt(running_squared_diff[side] / running_count[side]);
@@ -232,7 +232,7 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
         //.delay(function(d,i){ return 10*i; }) 
         .ease(d3.easeLinear)
         .duration(100)
-        .attr("cx", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return x_scale('Purple side'); else return x_scale('Green side'); })
+        .attr("cx", function (d) { if (is_left_of_line(+d.long, +d.lat)) return x_scale('Purple side'); else return x_scale('Green side'); })
         .attr("cy", function (d, i) { return y_scale(moving_target[i]) })
         .transition()
         //.delay(function(d,i){ return 10*i; })
