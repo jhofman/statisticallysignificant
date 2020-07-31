@@ -25,7 +25,7 @@ var x_scale, x_axis, y_scale, y_axis;
 var new_x_scale, new_y_scale;
 
 d3.queue()
-    .defer(d3.json, "https://raw.githubusercontent.com/shawnbot/topogram/master/data/us-states.geojson")  // USA shape
+    .defer(d3.json, "us-states.geojson")  // USA shape
     .defer(d3.csv, "initial_points.csv") // Position of circles
     .await(ready);
 
