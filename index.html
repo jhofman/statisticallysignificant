@@ -36,7 +36,7 @@
           <label for="nAngle" style="display: inline; width: 240px; text-align: right">
             First, adjust this slider to spin the line and split the country in half<span id="nAngle-value"></span>
           </label>
-          <input type="range" min="-180" max="180" value="0" id="nAngle">
+          <input type="range" min="-180" max="180" value="0" id="nAngle" style="padding-top: 10px; padding-bottom: 10px">
         </p>
 
         <button id="start-button" class="btn btn-default">Then click here to compare average heights on both sides of
@@ -48,13 +48,18 @@
             href="https://www.cdc.gov/brfss/annual_data/annual_2018.html">national survey</a>.
           We're sampling people one at a time and updating our estimate of the average height on each side of the line
           as we go, shown in the bottom plot.
-          The error bars represent uncertainty in estimating these averages. As we sample more and more people, our
+          The error bars represent uncertainty in estimating these averages.
+        </p>
+
+        <p>As we sample more and more people, our
           estimates settle down and our uncertainty decreases.
-          Eventually we'll have enough data to conclude that there's a statistically significant difference, meaning that it's unlikely that we would see these differences if the true average height on each side of the line were identical.
+          Eventually we'll have enough data to conclude that there's a statistically significant difference, meaning
+          that it's unlikely that we would see these differences if the true average height on each side of the line
+          were identical.
         </p>
       </div>
 
-      <svg id="my_dataviz" width="640" height="650" style="padding-top: 20px"></svg>
+      <svg id="my_dataviz" width="640" height="650" style="padding-top: 10px"></svg>
 
       <p id="status">
         So far we have sampled <span id="samples-taken">0</span> people and do not have statistical significance.

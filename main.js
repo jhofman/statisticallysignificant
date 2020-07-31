@@ -3,8 +3,9 @@ var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
 
-// Map and projection
+var data, geo_data;
 
+// Map and projection
 var center_of_map = [-100, 40];
 var projection = d3.geoMercator()
     .center(center_of_map)                // GPS of location to zoom on
@@ -15,33 +16,26 @@ var angle = 0;
 var left_top, left_bottom, right_top, right_bottom;
 var hit_stat_sig = false;
 
+var usa_map, circles, divider;
+
+var x_scale, y_scale;
+
 d3.queue()
     .defer(d3.json, "https://raw.githubusercontent.com/shawnbot/topogram/master/data/us-states.geojson")  // USA shape
     .defer(d3.csv, "initial_points.csv") // Position of circles
-    //.defer(d3.json, "https://bl.ocks.org/mbostock/raw/9943478/us.json") 
-    //.defer(d3.csv, "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_gpsLocSurfer.csv") // Position of circles
     .await(ready);
 
-function ready(error, dataGeo, data) {
+function ready(error, fetched_geo_data, fetched_data) {
 
+    // hack to keep things global for easy debugging
+    geo_data = fetched_geo_data;
+    data = fetched_data;
     //data = d3.shuffle(data);
 
-    // Create a color scale
-    var allContinent = d3.map(data, function (d) { return (d.homecontinent) }).keys()
-    var color = d3.scaleOrdinal()
-        .domain(allContinent)
-        .range(d3.schemePaired);
-
-    // Add a scale for bubble size
-    var valueExtent = d3.extent(data, function (d) { return +d.n; })
-    var size = d3.scaleSqrt()
-        .domain(valueExtent)  // What's in the data
-        .range([1, 50])  // Size in pixel
-
     // Draw the map
-    svg.append("g")
+    usa_map = svg.append("g")
         .selectAll("path")
-        .data(dataGeo.features)
+        .data(geo_data.features)
         .enter()
         .append("path")
         .attr("fill", "none")
@@ -51,9 +45,69 @@ function ready(error, dataGeo, data) {
         .style("stroke", "#b8b8b8")
         .style("opacity", .7)
 
+    // create x and y scales, show axes and
+    setup_plot();
+
+    // Add circles:
+    circles = svg
+        .selectAll("myCircles")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", function (d) { return projection([+d.homelon, +d.homelat])[0] })
+        .attr("cy", function (d) { return projection([+d.homelon, +d.homelat])[1] })
+        .attr("r", function (d) { return 2 })
+        .style("fill", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple"; else return "green"; })
+        .attr("stroke", function (d) { if (d.n > 2000) { return "black" } else { return "none" } })
+        .attr("stroke-width", 1)
+        .attr("fill-opacity", 0)
+
+    circles
+        .transition()
+        .delay(function (d, i) { return 1000 * i / data.length; })
+        .duration(1)
+        .attr("fill-opacity", 0.1)
+        .attr("class", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple-circle"; else return "green-circle"; })
+
+    // add divider line
+    var divider = svg.append('line')
+        .attr('x1', 0)
+        .attr('y1', 0)
+        .attr('x2', 0)
+        .attr('y2', 0)
+        .attr('stroke', 'black')
+        .attr('stroke-width', '5px')
+
+    update(divider, projection(center_of_map)[0], 200, 0, circles);
+
+    divider
+        .transition()
+        .duration(1000)
+        .attr('y1', -200)
+        .attr('y2', 200)
+    //.on("end", play_animation(svg, data, circles, x_scale, y_scale))
+
+    // when the input range changes update the angle 
+    d3.select("#nAngle").on("input", function () {
+        angle = +this.value;
+        update(divider, projection(center_of_map)[0], 200, +this.value, circles);
+    });
+
+    circles
+        .style("fill", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple"; else return "green"; });
+
+    // start on start button click
+    $('#start-button').click(function () {
+        $('#instructions').slideUp();
+        $('#started').fadeIn();
+        play_animation(svg, data, circles, x_scale, y_scale);
+    });
+}
+
+function setup_plot() {
     /* scale and axis for x */
     // Create scale
-    var x_scale = d3.scalePoint()
+    x_scale = d3.scalePoint()
         .domain(['', 'Purple side', 'Green side', ' '])
         .range([100, width - 100]);
     // Add scales to axis
@@ -67,7 +121,7 @@ function ready(error, dataGeo, data) {
         .call(x_axis);
 
     /* scale and axis for y */
-    var y_scale = d3.scaleLinear()
+    y_scale = d3.scaleLinear()
         .domain([65, 70])
         //.range([height/4,0]);
         .range([0.9 * height, 0.9 * height - height / 4])
@@ -90,71 +144,9 @@ function ready(error, dataGeo, data) {
         .attr("y", 65)
         .attr("x", -(0.9 * height - height / 4))
         .text("Average height (inches)")
-
-    // Add a scale for bubble size
-    var valueExtent = d3.extent(data, function (d) { return +d.n; })
-    var size = d3.scaleSqrt()
-        .domain(valueExtent)  // What's in the data
-        .range([1, 50])  // Size in pixel
-
-    // Add circles:
-    var circles = svg
-        .selectAll("myCircles")
-        .data(data)
-        //.data(data.sort(function(a,b) { return +b.n - +a.n }).filter(function(d,i){ return i<1000 }))
-        .enter()
-        .append("circle")
-        .attr("cx", function (d) { return projection([+d.homelon, +d.homelat])[0] })
-        .attr("cy", function (d) { return projection([+d.homelon, +d.homelat])[1] })
-        .attr("r", function (d) { return 2 * size(+d.n) })
-        //.style("fill", function(d){ return color(d.homecontinent) })
-        //.style("fill", function(d){ if (+d.homelon < -100) return "purple"; else return "green"; })
-        .style("fill", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple"; else return "green"; })
-        //.style("fill", "black")
-        .attr("stroke", function (d) { if (d.n > 2000) { return "black" } else { return "none" } })
-        .attr("stroke-width", 1)
-        //.attr("fill-opacity", .4)
-        .attr("fill-opacity", 0.1)
-        .attr("class", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple-circle"; else return "green-circle"; })
-
-
-
-    // add divider line
-    var divider = svg.append('line')
-        .attr('x1', 0)
-        .attr('y1', 0)
-        .attr('x2', 0)
-        .attr('y2', 0)
-        .attr('stroke', 'black')
-        .attr('stroke-width', '5px')
-    //.attr("transform", "translate(" + projection(center_of_map)[0] + ",200) rotate(0)")
-
-    update(divider, projection(center_of_map)[0], 200, 0, circles);
-
-    divider
-        .transition()
-        .duration(1000)
-        .attr('y1', -200)
-        .attr('y2', 200)
-    //.on("end", play_animation(svg, data, circles, x_scale, y_scale))
-
-    // when the input range changes update the angle 
-    d3.select("#nAngle").on("input", function () {
-        angle = +this.value;
-        update(divider, projection(center_of_map)[0], 200, +this.value, circles);
-    });
-
-    circles
-        .style("fill", function (d) { if (is_left_of_line(+d.homelon, +d.homelat)) return "purple"; else return "green"; });
-
-    $('#start-button').click(function () {
-        $('#instructions').slideUp();
-        $('#started').fadeIn();
-        play_animation(svg, data, circles, x_scale, y_scale);
-    });
 }
 
-// update the element
+// update the dividing line
 function update(divider, x, y, nAngle, circles) {
 
     // adjust the text on the range slider
@@ -235,7 +227,7 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
         .delay(function (d, i) { return 100 * i; })
         .duration(0)
         .attr("fill-opacity", 1)
-        .attr("r", function (d) { return 3 * size(+d.n) })
+        .attr("r", function (d) { return 3; })
         .transition()
         //.delay(function(d,i){ return 10*i; }) 
         .ease(d3.easeLinear)
@@ -354,6 +346,29 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
 
 }
 
-function is_left_of_line(x, y) {
+
+// check which side of line
+// works in original lat / long space
+// but this gets messed up by projection
+// so use version below instead
+function is_left_of_line_lat_lon(x, y) {
     return (y - 38) - Math.tan((90 - angle) * Math.PI / 180) * (x + 100) > 0;
+}
+
+// check which side of line
+// in projected map space
+function is_left_of_line(x, y) {
+    var p = projection([x,y]);
+    x = p[0];
+    y = p[1];
+
+    var x0 = projection(center_of_map)[0]
+    var y0 = 200;
+    
+    var side = (y - y0) - Math.tan((angle - 90) * Math.PI / 180) * (x - x0) > 0;
+
+    if (angle >= 0)
+        return !side;
+    else
+        return side;
 }
