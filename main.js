@@ -17,9 +17,12 @@ var left_top, left_bottom, right_top, right_bottom;
 var hit_stat_sig = false;
 
 var usa_map, circles, divider;
+
 var left_average, left_bar, right_average, right_bar;
+var last_left_mean, last_left_se, last_right_mean, last_right_se;
 
 var x_scale, x_axis, y_scale, y_axis;
+var new_x_scale, new_y_scale;
 
 d3.queue()
     .defer(d3.json, "https://raw.githubusercontent.com/shawnbot/topogram/master/data/us-states.geojson")  // USA shape
@@ -292,9 +295,13 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
             if (side == 'Purple side') {
                 this_average = left_average;
                 this_bar = left_bar;
+                last_left_mean = moving_target[point_ndx];
+                last_left_se = moving_se[point_ndx];
             } else {
                 this_average = right_average;
                 this_bar = right_bar;
+                last_right_mean = moving_target[point_ndx];
+                last_right_se = moving_se[point_ndx];
             }
 
             left_top = +left_bar.attr('y1')
@@ -308,14 +315,14 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
                     .html('<font color=red>We found a statistically significant difference after sampling ' + (point_ndx + 1) + ' people!</font>');
                 hit_stat_sig = true;
 
-                d3
-                    .selectAll(".being-sampled")
-                    .attr("fill-opacity", 0)
-
                 // stop all transitions
                 d3
                     .selectAll('*')
                     .transition();
+
+                d3
+                    .selectAll(".being-sampled")
+                    .attr("fill-opacity", 0)
 
                 show_explainer();
 
@@ -389,8 +396,8 @@ function is_left_of_line(x, y) {
 }
 
 function show_explainer() {
-    $('#explainer').fadeIn(function() {
-        $('#show-all-button').fadeIn().click(function() {
+    $('#explainer').fadeIn(function () {
+        $('#show-all-button').fadeIn().click(function () {
             $(this).fadeOut();
             rescale_and_show_sampled_points();
         });
@@ -399,8 +406,8 @@ function show_explainer() {
 }
 
 function rescale_and_show_sampled_points() {
-    var new_y_scale = y_scale.domain([50, 90])
-    var new_y_axis = d3.axisLeft().scale(new_y_scale)
+    new_y_scale = y_scale.domain([50, 90])
+    new_y_axis = d3.axisLeft().scale(new_y_scale)
 
     $('.y-axis-label').fadeOut(function () {
         $(this).html('Height (inches)').fadeIn();
@@ -412,10 +419,37 @@ function rescale_and_show_sampled_points() {
         .duration(2000)
         .call(new_y_axis)
         .on("end", show_sampled_points)
-
 }
 
 function show_sampled_points() {
+    left_average
+        .attr("stroke", "black")
+        .attr("fill", "black")
+        .transition()
+        .attr("r", 2)
+        .attr("cy", new_y_scale(last_left_mean))
+
+    left_bar
+        .attr("stroke", "black")
+        .attr("fill", "black")
+        .transition()
+        .attr('y1', new_y_scale(last_left_mean + last_left_se))
+        .attr('y2', new_y_scale(last_left_mean - last_left_se))
+
+    right_average
+        .attr("stroke", "black")
+        .attr("fill", "black")
+        .transition()
+        .attr("r", 2)
+        .attr("cy", new_y_scale(last_right_mean))
+
+    right_bar
+        .attr("stroke", "black")
+        .attr("fill", "black")
+        .transition()
+        .attr('y1', new_y_scale(last_right_mean + last_right_se))
+        .attr('y2', new_y_scale(last_right_mean - last_right_se))
+
     d3
         .selectAll('.sampled')
         .attr("cx", function (d) { if (is_left_of_line(+d.long, +d.lat)) return jitter_x(x_scale('Purple side')); else return jitter_x(x_scale('Green side')); })
@@ -423,26 +457,12 @@ function show_sampled_points() {
         .transition()
         .duration(1000)
         .attr("fill-opacity", 0.25)
-        .on("end", function() {
-            $('#rest-of-explainer').slideDown(function() {
+        .on("end", function () {
+            $('#rest-of-explainer').slideDown(function () {
                 $("html, body").animate({ scrollTop: $(document).height() }, "slow");
             });
         })
 
-    left_average
-        .attr("stroke", "black")
-        .attr("fill", "black")
-    left_bar
-        .attr("stroke", "black")
-        .attr("fill", "black")
-        
-    right_average
-        .attr("stroke", "black")
-        .attr("fill", "black")
-
-    right_bar
-        .attr("stroke", "black")
-        .attr("fill", "black")
 }
 
 function jitter_y(y) {
