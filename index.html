@@ -31,42 +31,106 @@
     <div class="col-sm-offset-2 col-sm-8">
       <div id=instructions>
         <!-- <h2>Is there a statistically significant difference in height in different parts of the U.S.?</h2> -->
-        <h2>How do heights compare in different parts of the country?</h2>
+        <h3>How do heights compare in different parts of the country?</h3>
+        <p style="text-align: left">
+          Each of these 5,000 dots represents one person who reported their height in a national survey.
+          Your job is to split the country into two parts any way you like.
+          Then we'll run a statistical significance test to compare heights between the two sides.
+        </p>
+
         <p>
           <label for="nAngle" style="display: inline; width: 240px; text-align: right">
             First, adjust this slider to spin the line and split the country in half<span id="nAngle-value"></span>
           </label>
-          <input type="range" min="-180" max="180" value="0" id="nAngle" style="padding-top: 10px; padding-bottom: 10px">
+          <input type="range" min="-180" max="180" value="0" id="nAngle"
+            style="padding-top: 10px; padding-bottom: 10px">
         </p>
 
         <button id="start-button" class="btn btn-default">Then click here to compare average heights on both sides of
           the line</button><br />
+
       </div>
-      <div id=started style="display: none">
+      <div id=started style="display: none; text-align: left;">
         <p>
-          Each dot represents one person who reported their height in a <a
+          Each of these 5,000 dots represents one person who reported their height in a <a
             href="https://www.cdc.gov/brfss/annual_data/annual_2018.html">national survey</a>.
           We're sampling people one at a time and updating our estimate of the average height on each side of the line
           as we go, shown in the bottom plot.
           The error bars represent uncertainty in estimating these averages.
+          As we sample more and more people, our estimates settle down and our uncertainty decreases.
         </p>
 
-        <p>As we sample more and more people, our
-          estimates settle down and our uncertainty decreases.
-          Eventually we'll have enough data to conclude that there's a statistically significant difference, meaning
-          that it's unlikely that we would see these differences if the true average height on each side of the line
-          were identical.
+        <p>
+          <b>Believe it or not, after a few hundred samples we should have enough data to conclude that there's a
+            statistically
+            significant difference between heights on both sides of the line, <i>no matter where we draw the
+              line!</i></b>
         </p>
       </div>
 
       <svg id="my_dataviz" width="640" height="650" style="padding-top: 10px"></svg>
 
       <p id="status">
-        So far we have sampled <span id="samples-taken">0</span> people and do not have statistical significance.
+        So far we have sampled <span id="samples-taken">0</span> people and do not have statistical significance. Keep
+        watching for a few hundred points.
       <p>
 
+      <div id="explainer" style="display: none; text-align: left;">
+        <p>
+          So what exactly does this mean?
+        </p>
+
+        <p>
+          Does it mean that there's a huge difference in heights on each side of the line?
+        </p>
+        <!-- all of the people on one side of the line are taller than the people on the other side of the line? -->
+
+        <p>
+          <center>
+            <button id="show-all-button" class="btn btn-default" style="display: none;">Click here to see
+              everyone's individual heights</button>
+          </center>
+        </p>
+
+        <div id="rest-of-explainer" style="display: none;">
+          <p>
+            Of course not!
+          </p>
+
+          <p>
+            All it means is that <b>it's unlikely that we would see these results if the true distribution of heights
+              was
+              <i>exactly the same</i> on both sides of the line</b>, so we declare statistical
+            significance.
+            <!-- if heights really were distributed exactly the same
+          on both sides of the line, it's unlikely that we'd get the results we did -->
+          </p>
+
+          <p>
+            This is of course a bit of a silly, because <b>we probably don't care whether things are <i>exactly</i> the
+              same</b>
+            on both sides of the line, but this is what many statistical analyses are designed to test.
+          </p>
+
+          <p>
+            Instead, <b>we probably care about <i>how big the difference is</i></b> between each side of the line, which
+            is
+            known
+            as the <i>effect size</i>.
+          </p>
+
+          <p>
+            As you can see, there's a very small difference in average heights between both sides of the line. And of
+            course not everyone is average.</p>
+
+          <p>In short, <b>statistical significance doesn't mean practical
+              significance</b>.
+          </p>
+
+        </div>
+
+      </div>
     </div>
-  </div>
 </body>
 
 <script src="main.js"></script>

@@ -17,8 +17,9 @@ var left_top, left_bottom, right_top, right_bottom;
 var hit_stat_sig = false;
 
 var usa_map, circles, divider;
+var left_average, left_bar, right_average, right_bar;
 
-var x_scale, y_scale;
+var x_scale, x_axis, y_scale, y_axis;
 
 d3.queue()
     .defer(d3.json, "https://raw.githubusercontent.com/shawnbot/topogram/master/data/us-states.geojson")  // USA shape
@@ -38,6 +39,7 @@ function ready(error, fetched_geo_data, fetched_data) {
         .data(geo_data.features)
         .enter()
         .append("path")
+        .attr("id", "usa-map")
         .attr("fill", "none")
         .attr("d", d3.geoPath()
             .projection(projection)
@@ -61,13 +63,14 @@ function ready(error, fetched_geo_data, fetched_data) {
         .attr("stroke", function (d) { if (d.n > 2000) { return "black" } else { return "none" } })
         .attr("stroke-width", 1)
         .attr("fill-opacity", 0)
+        .attr("class", "not-sampled")
 
     circles
         .transition()
         .delay(function (d, i) { return 1000 * i / data.length; })
         .duration(1)
         .attr("fill-opacity", 0.1)
-        .attr("class", function (d) { if (is_left_of_line(+d.long, +d.lat)) return "purple-circle"; else return "green-circle"; })
+    //.attr("class", function (d) { if (is_left_of_line(+d.long, +d.lat)) return "purple-circle"; else return "green-circle"; })
 
     // add divider line
     var divider = svg.append('line')
@@ -78,7 +81,7 @@ function ready(error, fetched_geo_data, fetched_data) {
         .attr('stroke', 'black')
         .attr('stroke-width', '5px')
 
-    update(divider, projection(center_of_map)[0], 200, 0, circles);
+    update_split(divider, projection(center_of_map)[0], 200, 0, circles);
 
     divider
         .transition()
@@ -90,7 +93,7 @@ function ready(error, fetched_geo_data, fetched_data) {
     // when the input range changes update the angle 
     d3.select("#nAngle").on("input", function () {
         angle = +this.value;
-        update(divider, projection(center_of_map)[0], 200, +this.value, circles);
+        update_split(divider, projection(center_of_map)[0], 200, +this.value, circles);
     });
 
     circles
@@ -111,13 +114,14 @@ function setup_plot() {
         .domain(['', 'Purple side', 'Green side', ' '])
         .range([100, width - 100]);
     // Add scales to axis
-    var x_axis = d3.axisBottom()
+    x_axis = d3.axisBottom()
         .scale(x_scale);
 
     //Append group and insert axis
     svg
         .append("g")
         .attr("transform", "translate(0," + 0.9 * height + ")")
+        .attr("class", "x-axis")
         .call(x_axis);
 
     /* scale and axis for y */
@@ -127,7 +131,7 @@ function setup_plot() {
         .range([0.9 * height, 0.9 * height - height / 4])
 
     // Add scales to axis
-    var y_axis = d3.axisLeft()
+    y_axis = d3.axisLeft()
         .scale(y_scale);
 
     //Append group and insert axis
@@ -135,10 +139,12 @@ function setup_plot() {
         .append("g")
         //.attr("transform", "translate(100," + (0.9*height - height/4) + ")")
         .attr("transform", "translate(100,0)")
+        .attr("class", "y-axis")
         .call(y_axis);
 
     // Add y axis label
     svg.append("text")
+        .attr("class", "y-axis-label")
         .attr("text-anchor", "end")
         .attr("transform", "rotate(-90)")
         .attr("y", 65)
@@ -147,7 +153,7 @@ function setup_plot() {
 }
 
 // update the dividing line
-function update(divider, x, y, nAngle, circles) {
+function update_split(divider, x, y, nAngle, circles) {
 
     // adjust the text on the range slider
     //d3.select("#nAngle-value").text(nAngle);
@@ -215,12 +221,6 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
         t_stat.push(diff_means[i] / sd_pooled);
     }
 
-    // Add a scale for bubble size
-    var valueExtent = d3.extent(data, function (d) { return +d.n; })
-    var size = d3.scaleSqrt()
-        .domain(valueExtent)  // What's in the data
-        .range([1, 50])  // Size in pixel
-
     // animate points
     circles
         .transition()
@@ -228,6 +228,7 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
         .duration(0)
         .attr("fill-opacity", 1)
         .attr("r", function (d) { return 3; })
+        .attr("class", "being-sampled")
         .transition()
         //.delay(function(d,i){ return 10*i; }) 
         .ease(d3.easeLinear)
@@ -238,27 +239,28 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
         //.delay(function(d,i){ return 10*i; })
         .duration(10)
         .attr("fill-opacity", function (d, i) { if (i == data.length) return 1; else return 0; })
+        .attr("class", "sampled")
 
 
     var point_ndx = 0;
 
-    var left_average = svg
+    left_average = svg
         .append("circle")
         .attr("r", 3)
         .attr("id", "left-average")
-        .style("fill", "purple")
+        .attr("fill", "purple")
         .attr("stroke-width", 1)
         .attr("fill-opacity", 0)
 
-    var right_average = svg
+    right_average = svg
         .append("circle")
         .attr("id", "right-average")
         .attr("r", 3)
-        .style("fill", "green")
+        .attr("fill", "green")
         .attr("stroke-width", 1)
         .attr("fill-opacity", 0)
 
-    var left_bar = svg
+    left_bar = svg
         .append("line")
         .attr("id", "left-bar")
         .attr('x1', x_scale('Purple side'))
@@ -269,7 +271,7 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
         .attr("stroke-width", 1)
         .attr("opacity", 0);
 
-    var right_bar = svg
+    right_bar = svg
         .append("line")
         .attr("id", "right-average")
         .attr('x1', x_scale('Green side'))
@@ -301,9 +303,22 @@ function play_animation(svg, data, circles, x_scale, y_scale) {
             right_bottom = +right_bar.attr('y2')
 
             if (!hit_stat_sig && point_ndx > 100 && Math.abs(t_stat[point_ndx]) > 1.96) {
-                d3.select('#status').html('<font color=red>We found a statistically significant difference after sampling ' + (point_ndx + 1) + ' people!</font>');
+                d3
+                    .select('#status')
+                    .html('<font color=red>We found a statistically significant difference after sampling ' + (point_ndx + 1) + ' people!</font>');
                 hit_stat_sig = true;
-                d3.selectAll('*').transition();
+
+                d3
+                    .selectAll(".being-sampled")
+                    .attr("fill-opacity", 0)
+
+                // stop all transitions
+                d3
+                    .selectAll('*')
+                    .transition();
+
+                show_explainer();
+
                 return;
             }
 
@@ -358,17 +373,82 @@ function is_left_of_line_lat_lon(x, y) {
 // check which side of line
 // in projected map space
 function is_left_of_line(x, y) {
-    var p = projection([x,y]);
+    var p = projection([x, y]);
     x = p[0];
     y = p[1];
 
     var x0 = projection(center_of_map)[0]
     var y0 = 200;
-    
+
     var side = (y - y0) - Math.tan((angle - 90) * Math.PI / 180) * (x - x0) > 0;
 
     if (angle >= 0)
         return !side;
     else
         return side;
+}
+
+function show_explainer() {
+    $('#explainer').fadeIn(function() {
+        $('#show-all-button').fadeIn().click(function() {
+            $(this).fadeOut();
+            rescale_and_show_sampled_points();
+        });
+        $("html, body").animate({ scrollTop: $(document).height() }, "slow");
+    });
+}
+
+function rescale_and_show_sampled_points() {
+    var new_y_scale = y_scale.domain([50, 90])
+    var new_y_axis = d3.axisLeft().scale(new_y_scale)
+
+    $('.y-axis-label').fadeOut(function () {
+        $(this).html('Height (inches)').fadeIn();
+    });
+
+    d3
+        .select('.y-axis')
+        .transition()
+        .duration(2000)
+        .call(new_y_axis)
+        .on("end", show_sampled_points)
+
+}
+
+function show_sampled_points() {
+    d3
+        .selectAll('.sampled')
+        .attr("cx", function (d) { if (is_left_of_line(+d.long, +d.lat)) return jitter_x(x_scale('Purple side')); else return jitter_x(x_scale('Green side')); })
+        .attr("cy", function (d) { return jitter_y(y_scale(d.height)); })
+        .transition()
+        .duration(1000)
+        .attr("fill-opacity", 0.25)
+        .on("end", function() {
+            $('#rest-of-explainer').slideDown(function() {
+                $("html, body").animate({ scrollTop: $(document).height() }, "slow");
+            });
+        })
+
+    left_average
+        .attr("stroke", "black")
+        .attr("fill", "black")
+    left_bar
+        .attr("stroke", "black")
+        .attr("fill", "black")
+        
+    right_average
+        .attr("stroke", "black")
+        .attr("fill", "black")
+
+    right_bar
+        .attr("stroke", "black")
+        .attr("fill", "black")
+}
+
+function jitter_y(y) {
+    return y + height / 20 * (Math.random() - 0.5);
+}
+
+function jitter_x(x) {
+    return x + width / 10 * (Math.random() - 0.5);
 }
